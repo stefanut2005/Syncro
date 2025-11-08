@@ -10,98 +10,106 @@ class ApiClient {
   static const String baseUrl = 'https://ff5ae32c379e.ngrok-free.app';
   final Duration _timeout = const Duration(seconds: 10);
 
-  Future<bool> login({String? username, String? email, required String hash}) async {
+  Future<bool> login(
+      {String? username, String? email, required String hash}) async {
     final uri = Uri.parse('$baseUrl/login');
-    // --- MODIFIED: Changed body back to Map<String, dynamic> ---
     final body = <String, dynamic>{'hash': hash};
     if (username != null && username.isNotEmpty) {
       body['username'] = username;
     } else if (email != null && email.isNotEmpty) {
       body['email'] = email;
     }
-    
-    // --- MODIFIED: Using http.Request with 'POST' method explicitly ---
+
     final request = http.Request('POST', uri);
-    // --- MODIFIED: Change Content-Type back to application/json ---
     request.headers['Content-Type'] = 'application/json';
     request.body = jsonEncode(body);
-    // --- END MODIFICATION ---
-    
+
     final streamedResponse = await request.send().timeout(_timeout);
     final resp = await http.Response.fromStream(streamedResponse);
-    // --- END MODIFICATION ---
 
     return resp.statusCode == 200;
   }
 
-  Future<bool> register({required String username, required String email, required String hash}) async {
+  Future<bool> register(
+      {required String username,
+      required String email,
+      required String hash}) async {
     final uri = Uri.parse('$baseUrl/register');
     final body = {'username': username, 'email': email, 'hash': hash};
 
-    // --- MODIFIED: Using http.Request with 'POST' method explicitly ---
     final request = http.Request('POST', uri);
-    // --- MODIFIED: Change Content-Type back to application/json ---
     request.headers['Content-Type'] = 'application/json';
     request.body = jsonEncode(body);
-    // --- END MODIFICATION ---
-    
+
     final streamedResponse = await request.send().timeout(_timeout);
     final resp = await http.Response.fromStream(streamedResponse);
-    // --- END MODIFICATION ---
-    
+
     return resp.statusCode == 201;
   }
 }
 
-// --- Theme Management ---
+// --- Theme Management (MODIFIED) ---
 class AppThemes {
+  // Theme Keys
   static const defaultBlue = 'defaultBlue';
+  static const sunrise = 'sunrise';
+  static const forest = 'forest';
+  static const ocean = 'ocean';
   static const purple = 'purple';
-  static const green = 'green';
-  static const orange = 'orange';
   static const pink = 'pink';
-  static const teal = 'teal';
 
+  // --- MODIFIED: Added new themes with more colors ---
   static final Map<String, Map<String, Color>> themes = {
     defaultBlue: {
       'primary': const Color(0xFF5E81F4),
       'secondary': const Color(0xFF7B68EE),
       'accent': const Color(0xFF4169E1),
+      'gradientEnd': const Color(0xFF4169E1), // Added for gradients
+    },
+    sunrise: {
+      'primary': const Color(0xFFFF8C00), // Deep Orange
+      'secondary': const Color(0xFFFFB347), // Lighter Orange
+      'accent': const Color(0xFFFF6347), // Tomato Red
+      'gradientEnd': const Color(0xFFFF6347),
+    },
+    forest: {
+      'primary': const Color(0xFF2E7D32), // Dark Green
+      'secondary': const Color(0xFF66BB6A), // Light Green
+      'accent': const Color(0xFFA1887F), // Brown
+      'gradientEnd': const Color(0xFF4CAF50), // Brighter Green
+    },
+    ocean: {
+      'primary': const Color(0xFF0277BD), // Deep Blue
+      'secondary': const Color(0xFF4FC3F7), // Light Blue
+      'accent': const Color(0xFF009688), // Teal
+      'gradientEnd': const Color(0xFF009688),
     },
     purple: {
       'primary': const Color(0xFF9D8FF7),
       'secondary': const Color(0xFFB8A4F5),
       'accent': const Color(0xFF7B68EE),
-    },
-    green: {
-      'primary': const Color(0xFF4CAF50),
-      'secondary': const Color(0xFF66BB6A),
-      'accent': const Color(0xFF388E3C),
-    },
-    orange: {
-      'primary': const Color(0xFFFF9800),
-      'secondary': const Color(0xFFFFB74D),
-      'accent': const Color(0xFFF57C00),
+      'gradientEnd': const Color(0xFF7B68EE),
     },
     pink: {
       'primary': const Color(0xFFE91E63),
       'secondary': const Color(0xFFF06292),
       'accent': const Color(0xFFC2185B),
+      'gradientEnd': const Color(0xFFC2185B),
     },
-    teal: {
-      'primary': const Color(0xFF009688),
-      'secondary': const Color(0xFF4DB6AC),
-      'accent': const Color(0xFF00796B),
-    },
+    // Removed green, orange, teal as they are replaced by richer themes
   };
 }
+// --- END MODIFICATION ---
 
 class ThemeManager {
-  static final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.dark);
-  static final ValueNotifier<String> colorThemeNotifier = ValueNotifier(AppThemes.defaultBlue);
+  static final ValueNotifier<ThemeMode> themeNotifier =
+      ValueNotifier(ThemeMode.dark);
+  static final ValueNotifier<String> colorThemeNotifier =
+      ValueNotifier(AppThemes.defaultBlue);
 }
 
 class AppTheme {
+  // --- MODIFIED: Updated to use new theme colors ---
   static ThemeData getLightTheme(String colorTheme) {
     final colors = AppThemes.themes[colorTheme]!;
     return ThemeData(
@@ -115,6 +123,7 @@ class AppTheme {
         surface: Colors.white, // White surfaces
         onBackground: const Color(0xFF1A1A1A),
         onSurface: const Color(0xFF1A1A1A),
+        error: const Color(0xFFFF6B6B),
       ),
       scaffoldBackgroundColor: const Color(0xFFF5F7FA),
       appBarTheme: const AppBarTheme(
@@ -126,7 +135,8 @@ class AppTheme {
       cardTheme: CardThemeData(
         elevation: 0,
         color: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.0)),
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.0)),
         margin: const EdgeInsets.only(bottom: 12.0),
       ),
       inputDecorationTheme: InputDecorationTheme(
@@ -150,7 +160,8 @@ class AppTheme {
           backgroundColor: colors['primary'],
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 16.0),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.0)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.0)),
           elevation: 0,
         ),
       ),
@@ -170,6 +181,7 @@ class AppTheme {
         surface: const Color(0xFF1A1A1A), // Dark surface
         onBackground: const Color(0xFFE8E8E8),
         onSurface: const Color(0xFFE8E8E8),
+        error: const Color(0xFFFF6B6B),
       ),
       scaffoldBackgroundColor: const Color(0xFF0D0D0D),
       appBarTheme: const AppBarTheme(
@@ -182,7 +194,8 @@ class AppTheme {
       cardTheme: CardThemeData(
         elevation: 0,
         color: const Color(0xFF1A1A1A),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.0)),
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.0)),
         margin: const EdgeInsets.only(bottom: 12.0),
       ),
       inputDecorationTheme: InputDecorationTheme(
@@ -206,13 +219,15 @@ class AppTheme {
           backgroundColor: colors['primary'],
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 16.0),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.0)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.0)),
           elevation: 0,
         ),
       ),
     );
   }
 }
+// --- END MODIFICATION ---
 
 // --- App Entry Point ---
 void main() {
@@ -266,7 +281,6 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
-  // --- MODIFIED: Single controller for username or email ---
   final _credentialController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
@@ -285,7 +299,6 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _performLogin() async {
-    // --- MODIFIED: Logic to handle single credential field ---
     final String credential = _credentialController.text.trim();
     final String password = _passwordController.text;
     final bool isEmail = credential.contains('@');
@@ -301,7 +314,6 @@ class _LoginPageState extends State<LoginPage> {
         hash: digest,
       );
       if (success) {
-        // Update UserData based on what was provided
         if (isEmail) {
           UserData.email = credential;
         } else {
@@ -338,23 +350,33 @@ class _LoginPageState extends State<LoginPage> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Icon(Icons.task_alt_rounded, size: 80, color: Theme.of(context).primaryColor),
+                    Icon(Icons.task_alt_rounded,
+                        size: 80, color: Theme.of(context).primaryColor),
                     const SizedBox(height: 24),
-                    Text('Welcome Back', textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold)),
+                    Text('Welcome Back',
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context)
+                            .textTheme
+                            .headlineMedium
+                            ?.copyWith(fontWeight: FontWeight.bold)),
                     const SizedBox(height: 8),
-                    Text('Sign in to continue', textAlign: TextAlign.center,
+                    Text('Sign in to continue',
+                        textAlign: TextAlign.center,
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            color: Theme.of(context).textTheme.bodySmall?.color)),
+                            color:
+                                Theme.of(context).textTheme.bodySmall?.color)),
                     const SizedBox(height: 48),
-                    // --- MODIFIED: Single TextFormField for Username or Email ---
                     TextFormField(
                       controller: _credentialController,
-                      decoration: const InputDecoration(labelText: 'Username or Email', prefixIcon: Icon(Icons.person_outline_rounded)),
-                      validator: (value) => (value == null || value.isEmpty) ? 'Please enter your username or email' : null,
+                      decoration: const InputDecoration(
+                          labelText: 'Username or Email',
+                          prefixIcon: Icon(Icons.person_outline_rounded)),
+                      validator: (value) =>
+                          (value == null || value.isEmpty)
+                              ? 'Please enter your username or email'
+                              : null,
                     ),
                     const SizedBox(height: 20),
-                    // --- END MODIFICATION ---
                     TextFormField(
                       controller: _passwordController,
                       obscureText: _obscurePassword,
@@ -362,34 +384,47 @@ class _LoginPageState extends State<LoginPage> {
                         labelText: 'Password',
                         prefixIcon: const Icon(Icons.lock_outline),
                         suffixIcon: IconButton(
-                          icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility),
-                          onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                          icon: Icon(_obscurePassword
+                              ? Icons.visibility_off
+                              : Icons.visibility),
+                          onPressed: () =>
+                              setState(() => _obscurePassword = !_obscurePassword),
                         ),
                       ),
-                      validator: (value) => (value == null || value.isEmpty || value.length < 6)
-                          ? 'Password must be at least 6 characters' : null,
+                      validator: (value) =>
+                          (value == null || value.isEmpty || value.length < 6)
+                              ? 'Password must be at least 6 characters'
+                              : null,
                     ),
                     const SizedBox(height: 32),
-                    ElevatedButton(onPressed: _login,
-                        child: const Text('Sign In', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600))),
+                    ElevatedButton(
+                        onPressed: _login,
+                        child: const Text('Sign In',
+                            style: TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.w600))),
                     const SizedBox(height: 20),
                     TextButton(
                       onPressed: () => Navigator.pushNamed(context, '/register'),
                       child: Text("Don't have an account? Sign Up",
-                          style: TextStyle(color: Theme.of(context).primaryColor)),
+                          style:
+                              TextStyle(color: Theme.of(context).primaryColor)),
                     ),
-                    // --- ADDED: Forgot Password Button ---
                     TextButton(
                       onPressed: () {
                         // TODO: Implement forgot password logic
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Forgot Password flow not implemented.')),
+                          const SnackBar(
+                              content:
+                                  Text('Forgot Password flow not implemented.')),
                         );
                       },
                       child: Text("Forgot Password?",
-                          style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6))),
+                          style: TextStyle(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withOpacity(0.6))),
                     ),
-                    // --- END ADDITION ---
                   ],
                 ),
               ),
@@ -442,7 +477,8 @@ class _RegisterPageState extends State<RegisterPage> {
 
     final api = ApiClient();
     try {
-      final created = await api.register(username: username, email: email, hash: digest);
+      final created =
+          await api.register(username: username, email: email, hash: digest);
       if (mounted) {
         if (created) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -479,25 +515,39 @@ class _RegisterPageState extends State<RegisterPage> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text('Create Account', textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold)),
+                    Text('Create Account',
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context)
+                            .textTheme
+                            .headlineMedium
+                            ?.copyWith(fontWeight: FontWeight.bold)),
                     const SizedBox(height: 8),
-                    Text('Sign up to get started', textAlign: TextAlign.center,
+                    Text('Sign up to get started',
+                        textAlign: TextAlign.center,
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            color: Theme.of(context).textTheme.bodySmall?.color)),
+                            color:
+                                Theme.of(context).textTheme.bodySmall?.color)),
                     const SizedBox(height: 40),
                     TextFormField(
                       controller: _usernameController,
-                      decoration: const InputDecoration(labelText: 'Username', prefixIcon: Icon(Icons.person_outline)),
-                      validator: (value) => (value == null || value.isEmpty) ? 'Please enter a username' : null,
+                      decoration: const InputDecoration(
+                          labelText: 'Username',
+                          prefixIcon: Icon(Icons.person_outline)),
+                      validator: (value) => (value == null || value.isEmpty)
+                          ? 'Please enter a username'
+                          : null,
                     ),
                     const SizedBox(height: 20),
                     TextFormField(
                       controller: _emailController,
-                      decoration: const InputDecoration(labelText: 'Email', prefixIcon: Icon(Icons.email_outlined)),
+                      decoration: const InputDecoration(
+                          labelText: 'Email',
+                          prefixIcon: Icon(Icons.email_outlined)),
                       keyboardType: TextInputType.emailAddress,
-                      validator: (value) => (value == null || value.isEmpty || !value.contains('@'))
-                          ? 'Please enter a valid email' : null,
+                      validator: (value) =>
+                          (value == null || value.isEmpty || !value.contains('@'))
+                              ? 'Please enter a valid email'
+                              : null,
                     ),
                     const SizedBox(height: 20),
                     TextFormField(
@@ -507,12 +557,17 @@ class _RegisterPageState extends State<RegisterPage> {
                         labelText: 'Password',
                         prefixIcon: const Icon(Icons.lock_outline),
                         suffixIcon: IconButton(
-                          icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility),
-                          onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                          icon: Icon(_obscurePassword
+                              ? Icons.visibility_off
+                              : Icons.visibility),
+                          onPressed: () =>
+                              setState(() => _obscurePassword = !_obscurePassword),
                         ),
                       ),
-                      validator: (value) => (value == null || value.isEmpty || value.length < 6)
-                          ? 'Password must be at least 6 characters' : null,
+                      validator: (value) =>
+                          (value == null || value.isEmpty || value.length < 6)
+                              ? 'Password must be at least 6 characters'
+                              : null,
                     ),
                     const SizedBox(height: 20),
                     TextFormField(
@@ -522,20 +577,29 @@ class _RegisterPageState extends State<RegisterPage> {
                         labelText: 'Confirm Password',
                         prefixIcon: const Icon(Icons.lock_outline),
                         suffixIcon: IconButton(
-                          icon: Icon(_obscureConfirmPassword ? Icons.visibility_off : Icons.visibility),
-                          onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
+                          icon: Icon(_obscureConfirmPassword
+                              ? Icons.visibility_off
+                              : Icons.visibility),
+                          onPressed: () => setState(() =>
+                              _obscureConfirmPassword = !_obscureConfirmPassword),
                         ),
                       ),
-                      validator: (value) => (value != _passwordController.text) ? 'Passwords do not match' : null,
+                      validator: (value) => (value != _passwordController.text)
+                          ? 'Passwords do not match'
+                          : null,
                     ),
                     const SizedBox(height: 32),
-                    ElevatedButton(onPressed: _register,
-                        child: const Text('Create Account', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600))),
+                    ElevatedButton(
+                        onPressed: _register,
+                        child: const Text('Create Account',
+                            style: TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.w600))),
                     const SizedBox(height: 20),
                     TextButton(
                       onPressed: () => Navigator.pop(context),
                       child: Text('Already have an account? Sign In',
-                          style: TextStyle(color: Theme.of(context).primaryColor)),
+                          style:
+                              TextStyle(color: Theme.of(context).primaryColor)),
                     ),
                   ],
                 ),
@@ -574,9 +638,7 @@ class Task {
     this.endTime,
   }) : endDate = endDate ?? startDate; // Ensures endDate is at least startDate
 
-  // Helper to get duration in days (minimum 1)
   int get durationInDays {
-    // Ensure we use dateOnly for correct day calculation
     final start = DateUtils.dateOnly(startDate);
     final end = DateUtils.dateOnly(endDate);
     return end.difference(start).inDays + 1;
@@ -595,7 +657,6 @@ class _HomePageState extends State<HomePage> {
   DateTime _selectedDate = DateUtils.dateOnly(DateTime.now());
   final ScrollController _dateScrollController = ScrollController();
 
-  // Mock data for tasks
   final List<Task> _tasks = [
     Task(
       id: '1',
@@ -610,7 +671,8 @@ class _HomePageState extends State<HomePage> {
       id: '2',
       title: 'Project Sprint (Daily)',
       priority: Priority.high,
-      startDate: DateUtils.dateOnly(DateTime.now().subtract(const Duration(days: 2))),
+      startDate:
+          DateUtils.dateOnly(DateTime.now().subtract(const Duration(days: 2))),
       endDate: DateUtils.dateOnly(DateTime.now().add(const Duration(days: 3))),
       isAllDay: true,
     ),
@@ -635,15 +697,17 @@ class _HomePageState extends State<HomePage> {
       title: 'Vacation (Monthly)',
       priority: Priority.medium,
       startDate: DateUtils.dateOnly(DateTime.now().add(const Duration(days: 5))),
-      endDate: DateUtils.dateOnly(DateTime.now().add(const Duration(days: 35))),
+      endDate:
+          DateUtils.dateOnly(DateTime.now().add(const Duration(days: 35))),
       isAllDay: true,
     ),
-     Task(
+    Task(
       id: '6',
       title: 'Phase 2 Planning (Weekly)',
       priority: Priority.high,
       startDate: DateUtils.dateOnly(DateTime.now().add(const Duration(days: 4))),
-      endDate: DateUtils.dateOnly(DateTime.now().add(const Duration(days: 18))),
+      endDate:
+          DateUtils.dateOnly(DateTime.now().add(const Duration(days: 18))),
       isAllDay: true,
     ),
     Task(
@@ -661,7 +725,7 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _scrollToSelectedDate(isAnimated: false); // Jump without animation on init
+      _scrollToSelectedDate(isAnimated: false);
     });
   }
 
@@ -671,27 +735,28 @@ class _HomePageState extends State<HomePage> {
     super.dispose();
   }
 
-  // --- MODIFIED: Added isAnimated parameter and improved logic ---
   void _scrollToSelectedDate({bool isAnimated = true}) {
-    const itemWidth = 70.0 + 12.0; // 70 for item, 12 for margin
+    const itemWidth = 70.0 + 12.0;
     const dateRange = 30; // Days shown before today
     final now = DateUtils.dateOnly(DateTime.now());
     final daysDifference = _selectedDate.difference(now).inDays;
-    
-    // Target offset to center the selected date
+
     final targetOffset = (daysDifference + dateRange) * itemWidth -
-        (MediaQuery.of(context).size.width / 2) + (itemWidth / 2);
+        (MediaQuery.of(context).size.width / 2) +
+        (itemWidth / 2);
 
     if (_dateScrollController.hasClients) {
       if (isAnimated) {
         _dateScrollController.animateTo(
-          targetOffset.clamp(0.0, _dateScrollController.position.maxScrollExtent),
+          targetOffset.clamp(
+              0.0, _dateScrollController.position.maxScrollExtent),
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeInOut,
         );
       } else {
         _dateScrollController.jumpTo(
-           targetOffset.clamp(0.0, _dateScrollController.position.maxScrollExtent),
+          targetOffset.clamp(
+              0.0, _dateScrollController.position.maxScrollExtent),
         );
       }
     }
@@ -731,10 +796,12 @@ class _HomePageState extends State<HomePage> {
           });
           Navigator.pop(context);
         },
-        onDelete: taskToEdit != null ? () {
-          setState(() => _tasks.removeWhere((t) => t.id == taskToEdit.id));
-          Navigator.pop(context);
-        } : null,
+        onDelete: taskToEdit != null
+            ? () {
+                setState(() => _tasks.removeWhere((t) => t.id == taskToEdit.id));
+                Navigator.pop(context);
+              }
+            : null,
       ),
     );
   }
@@ -743,12 +810,11 @@ class _HomePageState extends State<HomePage> {
     setState(() => task.isDone = !task.isDone);
   }
 
-  // Sorts by Priority (High > Low), then by Time (Time < All Day)
   int _compareTasksByPriority(Task a, Task b) {
     if (a.priority.index != b.priority.index) {
       return a.priority.index.compareTo(b.priority.index);
     }
-    if (a.isAllDay && !b.isAllDay) return 1; // All day tasks come after timed tasks
+    if (a.isAllDay && !b.isAllDay) return 1;
     if (!a.isAllDay && b.isAllDay) return -1;
     if (a.startTime != null && b.startTime != null) {
       final aMinutes = a.startTime!.hour * 60 + a.startTime!.minute;
@@ -769,27 +835,71 @@ class _HomePageState extends State<HomePage> {
     return counts;
   }
 
+  // --- ADDED: Helper to format the full date ---
+  String _formatFullDate(DateTime date) {
+    final now = DateUtils.dateOnly(DateTime.now());
+    if (DateUtils.isSameDay(date, now)) return 'Today';
+    
+    final days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    
+    return '${days[date.weekday - 1]}, ${months[date.month - 1]} ${date.day}, ${date.year}';
+  }
+  // --- END ADDITION ---
+
   @override
   Widget build(BuildContext context) {
-    // Filter tasks that are active on the selected date
     final tasksForSelectedDay = _tasks.where((task) {
       final startDateOnly = DateUtils.dateOnly(task.startDate);
       final endDateOnly = DateUtils.dateOnly(task.endDate);
-      return (_selectedDate.isAfter(startDateOnly.subtract(const Duration(days: 1))) &&
+      return (_selectedDate
+              .isAfter(startDateOnly.subtract(const Duration(days: 1))) &&
           _selectedDate.isBefore(endDateOnly.add(const Duration(days: 1))));
-    }).toList()..sort(_compareTasksByPriority);
+    }).toList()
+      ..sort(_compareTasksByPriority);
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Forecast', style: TextStyle(
-          fontSize: 28, fontWeight: FontWeight.bold,
-          color: Theme.of(context).primaryColor)),
+        // --- MODIFIED: Added visible date ---
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Forecast',
+                style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).primaryColor)),
+             Text(_formatFullDate(_selectedDate),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)
+                )),
+          ],
+        ),
+        // --- END MODIFICATION ---
         actions: [
           IconButton(
             icon: const Icon(Icons.calendar_month_rounded, size: 24),
             onPressed: _showCalendar,
             tooltip: 'Calendar',
           ),
+          // --- MOVED: Theme Toggle from Account to here ---
+          ValueListenableBuilder(
+            valueListenable: ThemeManager.themeNotifier,
+            builder: (_, themeMode, __) {
+              return IconButton(
+                icon: Icon(themeMode == ThemeMode.light
+                    ? Icons.dark_mode_outlined
+                    : Icons.light_mode_outlined),
+                onPressed: () {
+                  ThemeManager.themeNotifier.value =
+                      themeMode == ThemeMode.light
+                          ? ThemeMode.dark
+                          : ThemeMode.light;
+                },
+              );
+            },
+          ),
+          // --- END MOVE ---
           const SizedBox(width: 8),
         ],
       ),
@@ -811,11 +921,20 @@ class _HomePageState extends State<HomePage> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.event_available_rounded, size: 80,
-                            color: Theme.of(context).colorScheme.onBackground.withOpacity(0.3)),
+                        Icon(Icons.event_available_rounded,
+                            size: 80,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onBackground
+                                .withOpacity(0.3)),
                         const SizedBox(height: 16),
-                        Text('No tasks for this day', style: TextStyle(fontSize: 18,
-                            color: Theme.of(context).colorScheme.onBackground.withOpacity(0.6))),
+                        Text('No tasks for this day',
+                            style: TextStyle(
+                                fontSize: 18,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onBackground
+                                    .withOpacity(0.6))),
                       ],
                     ),
                   )
@@ -867,15 +986,20 @@ class HorizontalDatePicker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final now = DateUtils.dateOnly(DateTime.now());
-    // --- MODIFIED: Show 30 days past, 60 days future ---
     final firstDate = now.subtract(const Duration(days: 30));
+    // --- MODIFIED: Use theme gradient colors ---
+    final colors = AppThemes.themes[ThemeManager.colorThemeNotifier.value]!;
+    // --- END MODIFICATION ---
 
     return Container(
       height: 100,
       decoration: BoxDecoration(
         color: Theme.of(context).appBarTheme.backgroundColor,
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 2)),
+          BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 2)),
         ],
       ),
       child: ListView.builder(
@@ -895,17 +1019,23 @@ class HorizontalDatePicker extends StatelessWidget {
               width: 70,
               margin: const EdgeInsets.symmetric(horizontal: 6),
               decoration: BoxDecoration(
-                gradient: isSelected ? LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Theme.of(context).primaryColor,
-                    Theme.of(context).primaryColor.withOpacity(0.8),
-                  ],
-                ) : null,
-                color: isSelected ? null : (isToday
-                    ? Theme.of(context).primaryColor.withOpacity(0.1)
-                    : Colors.transparent),
+                // --- MODIFIED: Use theme gradient ---
+                gradient: isSelected
+                    ? LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          colors['primary']!,
+                          colors['gradientEnd']!.withOpacity(0.8),
+                        ],
+                      )
+                    : null,
+                // --- END MODIFICATION ---
+                color: isSelected
+                    ? null
+                    : (isToday
+                        ? Theme.of(context).primaryColor.withOpacity(0.1)
+                        : Colors.transparent),
                 borderRadius: BorderRadius.circular(20),
                 border: isToday && !isSelected
                     ? Border.all(color: Theme.of(context).primaryColor, width: 2)
@@ -914,37 +1044,48 @@ class HorizontalDatePicker extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(_formatDay(date), style: TextStyle(
-                    fontSize: 13, fontWeight: FontWeight.w600,
-                    color: isSelected ? Colors.white : (isToday
-                        ? Theme.of(context).primaryColor
-                        : Theme.of(context).colorScheme.onSurface.withOpacity(0.6)))),
+                  Text(_formatDay(date),
+                      style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: isSelected
+                              ? Colors.white
+                              : (isToday
+                                  ? Theme.of(context).primaryColor
+                                  : Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withOpacity(0.6)))),
                   const SizedBox(height: 8),
-                  Text(date.day.toString(), style: TextStyle(
-                    fontSize: 24, fontWeight: FontWeight.bold,
-                    color: isSelected ? Colors.white : (isToday
-                        ? Theme.of(context).primaryColor
-                        : Theme.of(context).colorScheme.onSurface))),
+                  Text(date.day.toString(),
+                      style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: isSelected
+                              ? Colors.white
+                              : (isToday
+                                  ? Theme.of(context).primaryColor
+                                  : Theme.of(context).colorScheme.onSurface))),
                   const SizedBox(height: 4),
-                  // Task counter dots
                   if (taskCount > 0)
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: List.generate(
-                        math.min(taskCount, 3), // Show max 3 dots
+                        math.min(taskCount, 3),
                         (i) => Container(
                           width: 5,
                           height: 5,
                           margin: const EdgeInsets.symmetric(horizontal: 1),
                           decoration: BoxDecoration(
-                            color: isSelected ? Colors.white : Theme.of(context).primaryColor,
+                            color: isSelected
+                                ? Colors.white
+                                : Theme.of(context).primaryColor,
                             shape: BoxShape.circle,
                           ),
                         ),
                       ),
                     ),
-                  if (taskCount == 0) // Keep spacing consistent
-                     const SizedBox(height: 5),
+                  if (taskCount == 0) const SizedBox(height: 5),
                 ],
               ),
             ),
@@ -964,29 +1105,39 @@ class AppDrawer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // --- MODIFIED: Use theme gradient ---
+    final colors = AppThemes.themes[ThemeManager.colorThemeNotifier.value]!;
+    // --- END MODIFICATION ---
+
     return Drawer(
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
           DrawerHeader(
             decoration: BoxDecoration(
+              // --- MODIFIED: Use theme gradient ---
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  Theme.of(context).primaryColor,
-                  Theme.of(context).primaryColor.withOpacity(0.8),
+                  colors['primary']!,
+                  colors['gradientEnd']!.withOpacity(0.8),
                 ],
               ),
+              // --- END MODIFICATION ---
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                const Icon(Icons.task_alt_rounded, size: 48, color: Colors.white),
+                const Icon(Icons.task_alt_rounded,
+                    size: 48, color: Colors.white),
                 const SizedBox(height: 12),
                 const Text('Task Manager',
-                    style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold)),
               ],
             ),
           ),
@@ -995,8 +1146,10 @@ class AppDrawer extends StatelessWidget {
             title: const Text('Account'),
             onTap: () {
               Navigator.pop(context);
-              Navigator.push(context, MaterialPageRoute(
-                builder: (context) => const AccountSettingsScreen()));
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => const AccountSettingsScreen()));
             },
           ),
           ListTile(
@@ -1012,8 +1165,10 @@ class AppDrawer extends StatelessWidget {
             title: const Text('Gantt Chart'),
             onTap: () {
               Navigator.pop(context);
-              Navigator.push(context, MaterialPageRoute(
-                builder: (context) => GanttChartScreen(tasks: tasks)));
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => GanttChartScreen(tasks: tasks)));
             },
           ),
           const Divider(),
@@ -1022,8 +1177,10 @@ class AppDrawer extends StatelessWidget {
             title: const Text('Themes'),
             onTap: () {
               Navigator.pop(context);
-              Navigator.push(context, MaterialPageRoute(
-                builder: (context) => const ThemesScreen()));
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => const ThemesScreen()));
             },
           ),
         ],
@@ -1032,7 +1189,7 @@ class AppDrawer extends StatelessWidget {
   }
 }
 
-// --- Calendar Screen ---
+// --- Calendar Screen (MODIFIED) ---
 class CalendarScreen extends StatefulWidget {
   final List<Task> tasks;
   final DateTime selectedDate;
@@ -1102,19 +1259,22 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   icon: const Icon(Icons.chevron_left_rounded),
                   onPressed: () {
                     setState(() {
-                      _focusedMonth = DateTime(_focusedMonth.year, _focusedMonth.month - 1);
+                      _focusedMonth =
+                          DateTime(_focusedMonth.year, _focusedMonth.month - 1);
                     });
                   },
                 ),
                 Text(
                   '${_getMonthName(_focusedMonth.month)} ${_focusedMonth.year}',
-                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                      fontSize: 20, fontWeight: FontWeight.bold),
                 ),
                 IconButton(
                   icon: const Icon(Icons.chevron_right_rounded),
                   onPressed: () {
                     setState(() {
-                      _focusedMonth = DateTime(_focusedMonth.year, _focusedMonth.month + 1);
+                      _focusedMonth =
+                          DateTime(_focusedMonth.year, _focusedMonth.month + 1);
                     });
                   },
                 ),
@@ -1124,43 +1284,27 @@ class _CalendarScreenState extends State<CalendarScreen> {
           Expanded(
             child: _buildCalendar(taskCounts),
           ),
-          Container(
-            padding: const EdgeInsets.all(20),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                ElevatedButton.icon(
-                  onPressed: () {
-                    widget.onDateSelected(_selectedDate);
-                    Navigator.pop(context);
-                  },
-                  icon: const Icon(Icons.check_rounded),
-                  label: const Text('Select Date'),
-                ),
-                OutlinedButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancel'),
-                ),
-              ],
-            ),
-          ),
+          // --- REMOVED: Button bar ---
         ],
       ),
     );
   }
 
   String _getMonthName(int month) {
-    const months = ['January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'];
+    const months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
     return months[month - 1];
   }
 
   Widget _buildCalendar(Map<DateTime, int> taskCounts) {
     final firstDayOfMonth = DateTime(_focusedMonth.year, _focusedMonth.month, 1);
-    final lastDayOfMonth = DateTime(_focusedMonth.year, _focusedMonth.month + 1, 0);
+    final lastDayOfMonth =
+        DateTime(_focusedMonth.year, _focusedMonth.month + 1, 0);
     final daysInMonth = lastDayOfMonth.day;
-    // Handle Sunday (7) as start of week (0)
-    final firstWeekday = firstDayOfMonth.weekday == 7 ? 0 : firstDayOfMonth.weekday;
+    final firstWeekday =
+        firstDayOfMonth.weekday == 7 ? 0 : firstDayOfMonth.weekday;
 
     return SingleChildScrollView(
       child: Padding(
@@ -1172,9 +1316,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
               children: ['S', 'M', 'T', 'W', 'T', 'F', 'S']
                   .map((day) => SizedBox(
                         width: 40,
-                        child: Text(day, textAlign: TextAlign.center,
-                            style: TextStyle(fontWeight: FontWeight.w600,
-                                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6))),
+                        child: Text(day,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withOpacity(0.6))),
                       ))
                   .toList(),
             ),
@@ -1185,26 +1334,36 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: List.generate(7, (dayIndex) {
-                    final dayNumber = weekIndex * 7 + dayIndex - firstWeekday + 1;
+                    final dayNumber =
+                        weekIndex * 7 + dayIndex - firstWeekday + 1;
                     if (dayNumber < 1 || dayNumber > daysInMonth) {
                       return const SizedBox(width: 40, height: 50);
                     }
 
-                    final date = DateTime(_focusedMonth.year, _focusedMonth.month, dayNumber);
+                    final date = DateTime(
+                        _focusedMonth.year, _focusedMonth.month, dayNumber);
                     final isSelected = DateUtils.isSameDay(date, _selectedDate);
                     final isToday = DateUtils.isSameDay(date, DateTime.now());
                     final taskCount = taskCounts[date] ?? 0;
 
                     return GestureDetector(
-                      onTap: () => setState(() => _selectedDate = date),
+                      // --- MODIFIED: Select and pop on tap ---
+                      onTap: () {
+                        setState(() => _selectedDate = date);
+                        widget.onDateSelected(date);
+                        Navigator.pop(context);
+                      },
+                      // --- END MODIFICATION ---
                       child: Container(
                         width: 40,
                         height: 50,
                         decoration: BoxDecoration(
-                          color: isSelected ? Theme.of(context).primaryColor : null,
+                          color:
+                              isSelected ? Theme.of(context).primaryColor : null,
                           borderRadius: BorderRadius.circular(12),
                           border: isToday && !isSelected
-                              ? Border.all(color: Theme.of(context).primaryColor, width: 2)
+                              ? Border.all(
+                                  color: Theme.of(context).primaryColor, width: 2)
                               : null,
                         ),
                         child: Stack(
@@ -1212,9 +1371,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
                             Center(
                               child: Text('$dayNumber',
                                   style: TextStyle(
-                                    color: isSelected ? Colors.white :
-                                      (isToday ? Theme.of(context).primaryColor : null),
-                                    fontWeight: isSelected || isToday ? FontWeight.bold : null,
+                                    color: isSelected
+                                        ? Colors.white
+                                        : (isToday
+                                            ? Theme.of(context).primaryColor
+                                            : null),
+                                    fontWeight: isSelected || isToday
+                                        ? FontWeight.bold
+                                        : null,
                                   )),
                             ),
                             if (taskCount > 0)
@@ -1229,9 +1393,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                     (i) => Container(
                                       width: 4,
                                       height: 4,
-                                      margin: const EdgeInsets.symmetric(horizontal: 1),
+                                      margin: const EdgeInsets.symmetric(
+                                          horizontal: 1),
                                       decoration: BoxDecoration(
-                                        color: isSelected ? Colors.white : Theme.of(context).primaryColor,
+                                        color: isSelected
+                                            ? Colors.white
+                                            : Theme.of(context).primaryColor,
                                         shape: BoxShape.circle,
                                       ),
                                     ),
@@ -1252,6 +1419,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 }
+// --- END MODIFICATION ---
 
 // --- Account Settings Screen ---
 class AccountSettingsScreen extends StatefulWidget {
@@ -1302,8 +1470,10 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
             Center(
               child: CircleAvatar(
                 radius: 50,
-                backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-                child: Icon(Icons.person_rounded, size: 50, color: Theme.of(context).primaryColor),
+                backgroundColor:
+                    Theme.of(context).primaryColor.withOpacity(0.1),
+                child: Icon(Icons.person_rounded,
+                    size: 50, color: Theme.of(context).primaryColor),
               ),
             ),
             const SizedBox(height: 32),
@@ -1340,29 +1510,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
                 prefixIcon: Icon(Icons.lock_reset),
               ),
             ),
-            const SizedBox(height: 32),
-            // --- ADDED: Light/Dark Mode Toggle ---
-            ValueListenableBuilder<ThemeMode>(
-              valueListenable: ThemeManager.themeNotifier,
-              builder: (_, themeMode, __) {
-                return Container(
-                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surface,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Theme.of(context).dividerColor),
-                  ),
-                  child: SwitchListTile(
-                    title: const Text('Dark Mode'),
-                    value: themeMode == ThemeMode.dark,
-                    onChanged: (bool value) {
-                      ThemeManager.themeNotifier.value = value ? ThemeMode.dark : ThemeMode.light;
-                    },
-                    secondary: Icon(themeMode == ThemeMode.dark ? Icons.dark_mode_rounded : Icons.light_mode_rounded),
-                  ),
-                );
-              },
-            ),
-            // --- END ADDITION ---
+            // --- REMOVED: Theme Toggle ---
             const SizedBox(height: 32),
             ElevatedButton(
               onPressed: _saveChanges,
@@ -1396,15 +1544,38 @@ class GanttChartScreen extends StatefulWidget {
 }
 
 class _GanttChartScreenState extends State<GanttChartScreen> {
-  String _viewMode = 'daily'; // daily, weekly, monthly
-  // --- REMOVED: _isHorizontal is not needed for this design ---
+  String _viewMode = 'daily';
+  final ScrollController _headerScrollController = ScrollController();
+  final ScrollController _bodyScrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    // Link the two scroll controllers
+    _headerScrollController.addListener(() {
+      if (_headerScrollController.offset != _bodyScrollController.offset) {
+        _bodyScrollController.jumpTo(_headerScrollController.offset);
+      }
+    });
+    _bodyScrollController.addListener(() {
+      if (_bodyScrollController.offset != _headerScrollController.offset) {
+        _headerScrollController.jumpTo(_bodyScrollController.offset);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _headerScrollController.dispose();
+    _bodyScrollController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Gantt Chart'),
-        // --- REMOVED: Rotate Button ---
       ),
       body: Column(
         children: [
@@ -1420,7 +1591,6 @@ class _GanttChartScreenState extends State<GanttChartScreen> {
             ),
           ),
           Expanded(
-            // --- MODIFIED: We only need one build method ---
             child: _buildHorizontalGantt(),
           ),
         ],
@@ -1449,7 +1619,6 @@ class _GanttChartScreenState extends State<GanttChartScreen> {
     );
   }
 
-  // --- MODIFIED: Complete overhaul of Gantt chart ---
   Widget _buildHorizontalGantt() {
     final sortedTasks = List<Task>.from(widget.tasks)
       ..sort((a, b) => a.startDate.compareTo(b.startDate));
@@ -1459,31 +1628,53 @@ class _GanttChartScreenState extends State<GanttChartScreen> {
     }
 
     final earliest = sortedTasks.first.startDate;
-    final latest = sortedTasks.map((t) => t.endDate).reduce((a, b) => a.isAfter(b) ? a : b);
-    // Add some padding to the end of the chart
-    final chartEndDate = latest.add(const Duration(days: 30));
-    final totalDays = chartEndDate.difference(earliest).inDays + 1;
-
-    double dayWidth;
-    int headerInterval; // How many days per header item
-    String Function(DateTime) getHeaderLabel;
-
+    final latest = sortedTasks
+        .map((t) => t.endDate)
+        .reduce((a, b) => a.isAfter(b) ? a : b);
+    
+    // Add padding to the end of the chart (e.g., 1 week for daily)
+    DateTime chartEndDate;
     switch (_viewMode) {
       case 'weekly':
-        dayWidth = 20.0;
-        headerInterval = 7;
-        getHeaderLabel = (date) => 'W${(date.day / 7).ceil()}';
+        chartEndDate = latest.add(const Duration(days: 35)); // 5 weeks
         break;
       case 'monthly':
-        dayWidth = 8.0;
-        headerInterval = 30; // Approx
-        getHeaderLabel = (date) => _getMonthName(date.month).substring(0, 3);
+        chartEndDate = latest.add(const Duration(days: 90)); // 3 months
         break;
       case 'daily':
       default:
-        dayWidth = 60.0;
+        chartEndDate = latest.add(const Duration(days: 7)); // 1 week
+        break;
+    }
+    final totalDays = chartEndDate.difference(earliest).inDays + 1;
+
+    double dayWidth;
+    int headerInterval;
+    String Function(DateTime) getHeaderLabel;
+    String Function(DateTime) getSubHeaderLabel;
+
+    switch (_viewMode) {
+      case 'weekly':
+        dayWidth = 25.0;
+        headerInterval = 7;
+        getHeaderLabel = (date) {
+           final weekNum = (date.difference(earliest).inDays / 7).floor() + 1;
+           return 'Week $weekNum';
+        };
+        getSubHeaderLabel = (date) => 'W ${ (date.day / 7).ceil()}'; // Not really used here
+        break;
+      case 'monthly':
+        dayWidth = 10.0;
+        headerInterval = 1; // Handled differently
+        getHeaderLabel = (date) => '${_getMonthName(date.month)} ${date.year}';
+        getSubHeaderLabel = (date) => '';
+        break;
+      case 'daily':
+      default:
+        dayWidth = 70.0;
         headerInterval = 1;
-        getHeaderLabel = (date) => '${date.day}';
+        getHeaderLabel = (date) => _getMonthName(date.month).substring(0, 3);
+        getSubHeaderLabel = (date) => date.day.toString();
         break;
     }
 
@@ -1491,22 +1682,33 @@ class _GanttChartScreenState extends State<GanttChartScreen> {
     final double totalWidth = totalDays * dayWidth;
 
     return SingleChildScrollView(
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: SizedBox(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // --- Timeline Header ---
+          _buildTimelineHeader(
+            earliest, totalDays, dayWidth, headerInterval,
+            getHeaderLabel, getSubHeaderLabel
+          ),
+          // --- Task Bars with Grid ---
+          Container(
             width: totalWidth,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // --- Timeline Header ---
-                _buildTimelineHeader(earliest, totalDays, dayWidth, headerInterval, getHeaderLabel),
-                const SizedBox(height: 16),
-                // --- Task Bars ---
-                ...sortedTasks.map((task) {
-                  final startOffsetDays = task.startDate.difference(earliest).inDays;
-                  final barWidth = task.durationInDays * dayWidth - 4; // -4 for padding
+            padding: const EdgeInsets.symmetric(vertical: 16.0),
+            child: CustomPaint(
+              // --- ADDED: Grid Painter ---
+              painter: _GridPainter(
+                dayWidth: dayWidth,
+                totalDays: totalDays,
+                headerInterval: _viewMode == 'monthly' ? 30 : headerInterval, // Approx for monthly lines
+                gridColor: Theme.of(context).dividerColor.withOpacity(0.5),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: sortedTasks.map((task) {
+                  final startOffsetDays =
+                      task.startDate.difference(earliest).inDays;
+                  final barWidth =
+                      task.durationInDays * dayWidth - 4; 
                   final marginLeft = startOffsetDays * dayWidth;
                   final color = _getPriorityColor(task.priority);
 
@@ -1521,6 +1723,13 @@ class _GanttChartScreenState extends State<GanttChartScreen> {
                         end: Alignment.centerRight,
                       ),
                       borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                         BoxShadow(
+                           color: color.withOpacity(0.2),
+                           blurRadius: 8,
+                           offset: const Offset(0, 4)
+                         )
+                      ]
                     ),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 12.0),
@@ -1540,108 +1749,157 @@ class _GanttChartScreenState extends State<GanttChartScreen> {
                     ),
                   );
                 }).toList(),
-              ],
+              ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
 
-  // --- ADDED: New Timeline Header Widget ---
   Widget _buildTimelineHeader(
-    DateTime earliest,
-    int totalDays,
-    double dayWidth,
-    int interval,
-    String Function(DateTime) getLabel,
+    DateTime earliest, int totalDays, double dayWidth, int interval,
+    String Function(DateTime) getLabel, String Function(DateTime) getSubLabel,
   ) {
     List<Widget> headers = [];
     DateTime currentDate = earliest;
 
-    for (int i = 0; i < totalDays; i += 1) {
-      if (i % interval == 0 || (_viewMode == 'monthly' && currentDate.day == 1 && i > 0)) {
-         if (_viewMode == 'monthly') {
-          // Calculate width for the month
+    if (_viewMode == 'monthly') {
+      int currentYear = earliest.year;
+      int currentMonth = earliest.month;
+      
+      for(int i = 0; i < totalDays; i++) {
+        if (i == 0 || currentDate.day == 1) {
           final daysInMonth = DateUtils.getDaysInMonth(currentDate.year, currentDate.month);
-          final daysToAdd = (i == 0) ? daysInMonth - currentDate.day + 1 : daysInMonth;
-          
-           headers.add(
+          final daysRemainingInMonth = (i == 0) ? daysInMonth - currentDate.day + 1 : daysInMonth;
+          final cellWidth = daysRemainingInMonth * dayWidth;
+
+          headers.add(
             Container(
-              width: daysToAdd * dayWidth,
-              height: 40,
+              width: cellWidth,
+              height: 50, // Taller header
               decoration: BoxDecoration(
                 border: Border(
                   left: BorderSide(color: Theme.of(context).dividerColor, width: 1),
+                  bottom: BorderSide(color: Theme.of(context).dividerColor, width: 1),
                 ),
               ),
               child: Center(
                 child: Text(
-                  '${getLabel(currentDate)} ${currentDate.year}',
+                  '${_getMonthName(currentDate.month).substring(0,3)} ${currentDate.year}',
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
               ),
             ),
           );
-          i += daysToAdd -1; // Skip ahead
-          currentDate = currentDate.add(Duration(days: daysToAdd));
-
+          i += daysRemainingInMonth - 1;
+          currentDate = currentDate.add(Duration(days: daysRemainingInMonth));
         } else {
-           // Daily and Weekly
-           headers.add(
+          currentDate = currentDate.add(const Duration(days: 1));
+        }
+      }
+    } else { // Daily and Weekly
+       for (int i = 0; i < totalDays; i += interval) {
+          final cellWidth = interval * dayWidth;
+          headers.add(
             Container(
-              width: interval * dayWidth,
-              height: 40,
+              width: cellWidth,
+              height: 50, // Taller header
               decoration: BoxDecoration(
                 border: Border(
                   left: BorderSide(color: Theme.of(context).dividerColor, width: 1),
+                  bottom: BorderSide(color: Theme.of(context).dividerColor, width: 1),
                 ),
               ),
               child: Center(
-                child: Text(
-                  _viewMode == 'daily' ? '${currentDate.day} ${_getMonthName(currentDate.month).substring(0,3)}' : getLabel(currentDate),
+                child: _viewMode == 'daily' ? Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                     Text(
+                      getSubLabel(currentDate), // "8"
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    ),
+                    Text(
+                      getLabel(currentDate), // "Nov"
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                  ],
+                ) : Text(
+                  getLabel(currentDate), // "Week 1"
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
               ),
             ),
           );
-          i += interval -1;
           currentDate = currentDate.add(Duration(days: interval));
-        }
-
-      } else if (_viewMode == 'monthly') {
-         currentDate = currentDate.add(const Duration(days: 1));
-      } else if (_viewMode == 'weekly') {
-         currentDate = currentDate.add(const Duration(days: 1));
-      } else {
-         currentDate = currentDate.add(const Duration(days: 1));
-      }
+       }
     }
 
-    return Row(children: headers);
-  }
 
-  // --- REMOVED: _buildVerticalGantt() is no longer needed ---
+    return SingleChildScrollView(
+      controller: _headerScrollController,
+      scrollDirection: Axis.horizontal,
+      child: Row(children: headers),
+    );
+  }
 
   Color _getPriorityColor(Priority priority) {
     switch (priority) {
       case Priority.high:
-        return const Color(0xFFFF6B6B);
+        return AppThemes.themes['sunrise']!['accent']!; // Red
       case Priority.medium:
-        return const Color(0xFFFFB347);
+        return AppThemes.themes['sunrise']!['primary']!; // Orange
       case Priority.low:
-        return const Color(0xFF4ECDC4);
+        return AppThemes.themes['ocean']!['accent']!; // Teal
     }
   }
 
   String _getMonthName(int month) {
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
     return months[month - 1];
   }
 }
-// --- END MODIFICATION ---
 
-// --- Themes Screen ---
+// --- ADDED: Custom Painter for Gantt Grid ---
+class _GridPainter extends CustomPainter {
+  final double dayWidth;
+  final int totalDays;
+  final int headerInterval;
+  final Color gridColor;
+
+  _GridPainter({
+    required this.dayWidth,
+    required this.totalDays,
+    required this.headerInterval,
+    required this.gridColor,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = gridColor
+      ..strokeWidth = 1.0;
+
+    // Draw vertical lines
+    for (int i = 0; i <= totalDays; i += headerInterval) {
+      final x = i * dayWidth;
+      if (x > size.width) break;
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) {
+    return true; // Repaint whenever view mode changes
+  }
+}
+// --- END ADDITION ---
+
+
+// --- Themes Screen (MODIFIED) ---
 class ThemesScreen extends StatelessWidget {
   const ThemesScreen({super.key});
 
@@ -1652,42 +1910,44 @@ class ThemesScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
+          // --- MODIFIED: Added new themes ---
           _buildThemeOption(
             context,
             'Default Blue',
             AppThemes.defaultBlue,
-            const Color(0xFF5E81F4),
+            AppThemes.themes[AppThemes.defaultBlue]!['primary']!,
+          ),
+           _buildThemeOption(
+            context,
+            'Sunrise',
+            AppThemes.sunrise,
+            AppThemes.themes[AppThemes.sunrise]!['primary']!,
+          ),
+           _buildThemeOption(
+            context,
+            'Forest',
+            AppThemes.forest,
+            AppThemes.themes[AppThemes.forest]!['primary']!,
+          ),
+           _buildThemeOption(
+            context,
+            'Ocean',
+            AppThemes.ocean,
+            AppThemes.themes[AppThemes.ocean]!['primary']!,
           ),
           _buildThemeOption(
             context,
             'Purple Dream',
             AppThemes.purple,
-            const Color(0xFF9D8FF7),
-          ),
-          _buildThemeOption(
-            context,
-            'Nature Green',
-            AppThemes.green,
-            const Color(0xFF4CAF50),
-          ),
-          _buildThemeOption(
-            context,
-            'Sunset Orange',
-            AppThemes.orange,
-            const Color(0xFFFF9800),
+            AppThemes.themes[AppThemes.purple]!['primary']!,
           ),
           _buildThemeOption(
             context,
             'Cherry Pink',
             AppThemes.pink,
-            const Color(0xFFE91E63),
+            AppThemes.themes[AppThemes.pink]!['primary']!,
           ),
-          _buildThemeOption(
-            context,
-            'Ocean Teal',
-            AppThemes.teal,
-            const Color(0xFF009688),
-          ),
+          // --- END MODIFICATION ---
         ],
       ),
     );
@@ -1703,6 +1963,8 @@ class ThemesScreen extends StatelessWidget {
       valueListenable: ThemeManager.colorThemeNotifier,
       builder: (context, currentTheme, _) {
         final isSelected = currentTheme == themeKey;
+        final colors = AppThemes.themes[themeKey]!;
+
         return Container(
           margin: const EdgeInsets.only(bottom: 16),
           decoration: BoxDecoration(
@@ -1710,18 +1972,25 @@ class ThemesScreen extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
             border: isSelected
                 ? Border.all(color: color, width: 3)
-                : Border.all(color: Theme.of(context).dividerColor, width: 1), // Added default border
+                : Border.all(
+                    color: Theme.of(context).dividerColor, width: 1),
           ),
           child: ListTile(
-            contentPadding: const EdgeInsets.all(16),
+            contentPadding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+            // --- MODIFIED: Show gradient ---
             leading: Container(
               width: 50,
               height: 50,
               decoration: BoxDecoration(
-                color: color,
+                gradient: LinearGradient(
+                  colors: [colors['primary']!, colors['gradientEnd']!],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  ),
                 shape: BoxShape.circle,
               ),
             ),
+            // --- END MODIFICATION ---
             title: Text(
               name,
               style: const TextStyle(
@@ -1735,13 +2004,15 @@ class ThemesScreen extends StatelessWidget {
             onTap: () {
               ThemeManager.colorThemeNotifier.value = themeKey;
             },
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), // For inkwell
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           ),
         );
       },
     );
   }
 }
+// --- END MODIFICATION ---
 
 // --- Task Card ---
 class TaskCard extends StatelessWidget {
@@ -1759,11 +2030,11 @@ class TaskCard extends StatelessWidget {
   Color _getPriorityColor(Priority priority) {
     switch (priority) {
       case Priority.high:
-        return const Color(0xFFFF6B6B);
+        return AppThemes.themes['sunrise']!['accent']!; // Red
       case Priority.medium:
-        return const Color(0xFFFFB347);
+        return AppThemes.themes['sunrise']!['primary']!; // Orange
       case Priority.low:
-        return const Color(0xFF4ECDC4);
+        return AppThemes.themes['ocean']!['accent']!; // Teal
     }
   }
 
@@ -1819,13 +2090,16 @@ class TaskCard extends StatelessWidget {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: task.isDone ? priorityColor : priorityColor.withOpacity(0.5),
+                        color: task.isDone
+                            ? priorityColor
+                            : priorityColor.withOpacity(0.5),
                         width: 2.5,
                       ),
                       color: task.isDone ? priorityColor : Colors.transparent,
                     ),
                     child: task.isDone
-                        ? const Icon(Icons.check_rounded, size: 18, color: Colors.white)
+                        ? const Icon(Icons.check_rounded,
+                            size: 18, color: Colors.white)
                         : null,
                   ),
                 ),
@@ -1840,30 +2114,50 @@ class TaskCard extends StatelessWidget {
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
                           color: task.isDone
-                              ? Theme.of(context).colorScheme.onSurface.withOpacity(0.5)
+                              ? Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withOpacity(0.5)
                               : Theme.of(context).colorScheme.onSurface,
-                          decoration: task.isDone ? TextDecoration.lineThrough : null,
+                          decoration:
+                              task.isDone ? TextDecoration.lineThrough : null,
                         ),
                       ),
                       const SizedBox(height: 6),
                       Row(
                         children: [
                           if (!task.isAllDay || task.startTime != null) ...[
-                            Icon(Icons.access_time_rounded, size: 14,
-                                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
+                            Icon(Icons.access_time_rounded,
+                                size: 14,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withOpacity(0.5)),
                             const SizedBox(width: 4),
                             Text(_formatTime(context),
-                                style: TextStyle(fontSize: 13,
-                                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6))),
+                                style: TextStyle(
+                                    fontSize: 13,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withOpacity(0.6))),
                           ],
                           if (_formatDuration().isNotEmpty) ...[
                             const SizedBox(width: 12),
-                            Icon(Icons.calendar_today_rounded, size: 14,
-                                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
+                            Icon(Icons.calendar_today_rounded,
+                                size: 14,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withOpacity(0.5)),
                             const SizedBox(width: 4),
                             Text(_formatDuration(),
-                                style: TextStyle(fontSize: 13,
-                                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6))),
+                                style: TextStyle(
+                                    fontSize: 13,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withOpacity(0.6))),
                           ],
                         ],
                       ),
@@ -1871,7 +2165,8 @@ class TaskCard extends StatelessWidget {
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
                     color: priorityColor.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(12),
@@ -1935,7 +2230,6 @@ class _TaskEditSheetState extends State<TaskEditSheet> {
       _startTime = widget.task!.startTime;
       _endTime = widget.task!.endTime;
     } else {
-      // New task defaults to selected date
       _startDate = widget.defaultDate;
       _endDate = widget.defaultDate;
     }
@@ -1944,7 +2238,8 @@ class _TaskEditSheetState extends State<TaskEditSheet> {
   void _submit() {
     if (_titleController.text.isEmpty) return;
 
-    final String id = widget.task?.id ?? DateTime.now().millisecondsSinceEpoch.toString();
+    final String id =
+        widget.task?.id ?? DateTime.now().millisecondsSinceEpoch.toString();
 
     widget.onSave(
       Task(
@@ -1972,14 +2267,12 @@ class _TaskEditSheetState extends State<TaskEditSheet> {
       setState(() {
         if (isStartDate) {
           _startDate = DateUtils.dateOnly(picked);
-          // Ensure end date is not before start date
           if (_endDate.isBefore(_startDate)) {
             _endDate = _startDate;
           }
         } else {
           _endDate = DateUtils.dateOnly(picked);
-          // Ensure start date is not after end date
-           if (_startDate.isAfter(_endDate)) {
+          if (_startDate.isAfter(_endDate)) {
             _startDate = _endDate;
           }
         }
@@ -2006,13 +2299,13 @@ class _TaskEditSheetState extends State<TaskEditSheet> {
   }
 
   Color _getPriorityColor(Priority priority) {
-    switch (priority) {
+     switch (priority) {
       case Priority.high:
-        return const Color(0xFFFF6B6B);
+        return AppThemes.themes['sunrise']!['accent']!; // Red
       case Priority.medium:
-        return const Color(0xFFFFB347);
+        return AppThemes.themes['sunrise']!['primary']!; // Orange
       case Priority.low:
-        return const Color(0xFF4ECDC4);
+        return AppThemes.themes['ocean']!['accent']!; // Teal
     }
   }
 
@@ -2035,10 +2328,12 @@ class _TaskEditSheetState extends State<TaskEditSheet> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(widget.task == null ? 'New Task' : 'Edit Task',
-                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                    style: const TextStyle(
+                        fontSize: 24, fontWeight: FontWeight.bold)),
                 if (widget.onDelete != null)
                   IconButton(
-                    icon: const Icon(Icons.delete_outline_rounded, color: Colors.red),
+                    icon: const Icon(Icons.delete_outline_rounded,
+                        color: Colors.red),
                     onPressed: widget.onDelete,
                   ),
               ],
@@ -2053,7 +2348,8 @@ class _TaskEditSheetState extends State<TaskEditSheet> {
               autofocus: true,
             ),
             const SizedBox(height: 24),
-            const Text('Priority', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+            const Text('Priority',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
             const SizedBox(height: 12),
             Row(
               children: Priority.values.map((priority) {
@@ -2067,19 +2363,26 @@ class _TaskEditSheetState extends State<TaskEditSheet> {
                       margin: const EdgeInsets.symmetric(horizontal: 4),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       decoration: BoxDecoration(
-                        color: isSelected ? color.withOpacity(0.2) : Colors.transparent,
+                        color: isSelected
+                            ? color.withOpacity(0.2)
+                            : Colors.transparent,
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
-                          color: isSelected ? color : Theme.of(context).dividerColor,
+                          color: isSelected
+                              ? color
+                              : Theme.of(context).dividerColor,
                           width: 2,
                         ),
                       ),
                       child: Text(priority.name.toUpperCase(),
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            fontSize: 12, fontWeight: FontWeight.bold,
-                            color: isSelected ? color : Theme.of(context).colorScheme.onSurface,
-                            letterSpacing: 0.5)),
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: isSelected
+                                  ? color
+                                  : Theme.of(context).colorScheme.onSurface,
+                              letterSpacing: 0.5)),
                     ),
                   ),
                 );
@@ -2091,9 +2394,10 @@ class _TaskEditSheetState extends State<TaskEditSheet> {
                 Expanded(
                   child: Container(
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.background, // Use background color
+                      color: Theme.of(context).colorScheme.background,
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Theme.of(context).dividerColor),
+                      border:
+                          Border.all(color: Theme.of(context).dividerColor),
                     ),
                     child: ListTile(
                       leading: const Icon(Icons.calendar_today_rounded),
@@ -2110,9 +2414,10 @@ class _TaskEditSheetState extends State<TaskEditSheet> {
                 Expanded(
                   child: Container(
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.background, // Use background color
+                      color: Theme.of(context).colorScheme.background,
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Theme.of(context).dividerColor),
+                      border:
+                          Border.all(color: Theme.of(context).dividerColor),
                     ),
                     child: ListTile(
                       leading: const Icon(Icons.event_rounded),
@@ -2130,7 +2435,7 @@ class _TaskEditSheetState extends State<TaskEditSheet> {
             const SizedBox(height: 16),
             Container(
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.background, // Use background color
+                color: Theme.of(context).colorScheme.background,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: Theme.of(context).dividerColor),
               ),
@@ -2148,9 +2453,10 @@ class _TaskEditSheetState extends State<TaskEditSheet> {
                   Expanded(
                     child: Container(
                       decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.background, // Use background color
+                        color: Theme.of(context).colorScheme.background,
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: Theme.of(context).dividerColor),
+                        border:
+                            Border.all(color: Theme.of(context).dividerColor),
                       ),
                       child: ListTile(
                         leading: const Icon(Icons.access_time_rounded),
@@ -2166,9 +2472,10 @@ class _TaskEditSheetState extends State<TaskEditSheet> {
                   Expanded(
                     child: Container(
                       decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.background, // Use background color
+                        color: Theme.of(context).colorScheme.background,
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: Theme.of(context).dividerColor),
+                        border:
+                            Border.all(color: Theme.of(context).dividerColor),
                       ),
                       child: ListTile(
                         leading: const Icon(Icons.access_time_filled_rounded),
@@ -2186,9 +2493,11 @@ class _TaskEditSheetState extends State<TaskEditSheet> {
             const SizedBox(height: 32),
             ElevatedButton(
               onPressed: _submit,
-              style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 18)),
+              style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 18)),
               child: Text(widget.task == null ? 'Create Task' : 'Update Task',
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                  style: const TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.w600)),
             ),
           ],
         ),
