@@ -3,7 +3,7 @@ import logging
 from logging.handlers import RotatingFileHandler
 import time
 from sqlalchemy.exc import OperationalError
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, make_response
 from sqlalchemy import create_engine, Column, Integer, String
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
@@ -33,6 +33,38 @@ class User(Base):
 # Note: table creation is deferred until DB is reachable (see wait_for_db below).
 
 app = Flask(__name__)
+
+# --- CORS configuration (simple, no extra dependency) ---
+# Configure via environment variables in production as needed.
+CORS_ORIGIN = os.getenv('CORS_ORIGIN', '*')
+CORS_ALLOW_HEADERS = os.getenv('CORS_ALLOW_HEADERS', 'Content-Type,Authorization')
+CORS_ALLOW_METHODS = os.getenv('CORS_ALLOW_METHODS', 'GET,POST,PUT,DELETE,OPTIONS')
+CORS_ALLOW_CREDENTIALS = os.getenv('CORS_ALLOW_CREDENTIALS', 'false').lower() in ('1', 'true', 'yes')
+
+
+@app.before_request
+def _handle_options_preflight():
+    # Respond to OPTIONS preflight quickly with the appropriate headers
+    if request.method == 'OPTIONS':
+        resp = make_response(('', 204))
+        resp.headers['Access-Control-Allow-Origin'] = CORS_ORIGIN
+        resp.headers['Access-Control-Allow-Methods'] = CORS_ALLOW_METHODS
+        resp.headers['Access-Control-Allow-Headers'] = CORS_ALLOW_HEADERS
+        resp.headers['Access-Control-Max-Age'] = os.getenv('CORS_MAX_AGE', '3600')
+        if CORS_ALLOW_CREDENTIALS:
+            resp.headers['Access-Control-Allow-Credentials'] = 'true'
+        return resp
+
+
+@app.after_request
+def _add_cors_headers(response):
+    # Add CORS headers to all responses
+    response.headers.setdefault('Access-Control-Allow-Origin', CORS_ORIGIN)
+    response.headers.setdefault('Access-Control-Allow-Methods', CORS_ALLOW_METHODS)
+    response.headers.setdefault('Access-Control-Allow-Headers', CORS_ALLOW_HEADERS)
+    if CORS_ALLOW_CREDENTIALS:
+        response.headers.setdefault('Access-Control-Allow-Credentials', 'true')
+    return response
 
 # --- Logging setup: write to stdout and to a rotating file in /var/log/app/app.log ---
 LOG_DIR = os.getenv("LOG_DIR", "/var/log/app")
