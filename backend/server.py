@@ -231,7 +231,12 @@ def login():
 
         if not match:
             return jsonify({"error": "invalid credentials"}), 401
-        return jsonify({"message": "login successful"}), 200
+        # Return decrypted email and username so clients can populate local state
+        try:
+            dec_email = decrypt_email(user.email) if user.email else ''
+        except Exception:
+            dec_email = ''
+        return jsonify({"message": "login successful", "username": user.username, "email": dec_email}), 200
     finally:
         db.close()
 

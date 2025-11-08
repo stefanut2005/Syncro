@@ -10,7 +10,9 @@ class ApiClient {
   static const String baseUrl = 'https://ff5ae32c379e.ngrok-free.app';
   final Duration _timeout = const Duration(seconds: 10);
 
-  Future<bool> login(
+  /// Attempt login. Returns decoded JSON map on success (contains at least
+  /// 'username' and 'email'), or null on failure.
+  Future<Map<String, dynamic>?> login(
       {String? username, String? email, required String hash}) async {
     final uri = Uri.parse('$baseUrl/login');
     final body = <String, dynamic>{'hash': hash};
@@ -26,8 +28,15 @@ class ApiClient {
 
     final streamedResponse = await request.send().timeout(_timeout);
     final resp = await http.Response.fromStream(streamedResponse);
-
-    return resp.statusCode == 200;
+    if (resp.statusCode == 200) {
+      try {
+        final decoded = jsonDecode(resp.body) as Map<String, dynamic>;
+        return decoded;
+      } catch (e) {
+        return null;
+      }
+    }
+    return null;
   }
 
   Future<bool> register(
@@ -308,17 +317,15 @@ class _LoginPageState extends State<LoginPage> {
 
     final api = ApiClient();
     try {
-      final success = await api.login(
+      final resp = await api.login(
         username: isEmail ? null : credential,
         email: isEmail ? credential : null,
         hash: digest,
       );
-      if (success) {
-        if (isEmail) {
-          UserData.email = credential;
-        } else {
-          UserData.username = credential;
-        }
+      if (resp != null) {
+        // Use server-provided username/email (server returns decrypted email)
+        UserData.username = (resp['username'] as String?) ?? '';
+        UserData.email = (resp['email'] as String?) ?? '';
         if (mounted) Navigator.pushReplacementNamed(context, '/home');
       } else {
         if (mounted) {
@@ -1430,8 +1437,9 @@ class AccountSettingsScreen extends StatefulWidget {
 }
 
 class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
-  final _usernameController = TextEditingController(text: UserData.username);
-  final _emailController = TextEditingController(text: UserData.email);
+  // Initialize controllers empty and populate from UserData in lifecycle
+  final _usernameController = TextEditingController();
+  final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _newPasswordController = TextEditingController();
 
@@ -1442,6 +1450,23 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
     _passwordController.dispose();
     _newPasswordController.dispose();
     super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // Ensure controllers reflect current UserData when the screen is created
+    _usernameController.text = UserData.username;
+    _emailController.text = UserData.email;
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // In case UserData changed before navigation, refresh controllers when
+    // the widget becomes active.
+    _usernameController.text = UserData.username;
+    _emailController.text = UserData.email;
   }
 
   void _saveChanges() {
