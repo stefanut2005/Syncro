@@ -244,7 +244,7 @@ def encrypt_email(plain: str) -> str:
     return base64.b64encode(nonce + ct).decode("utf-8")
 
 
-def decrypt_email(enc: str) -> str:
+def decrypt_email(enc: str) -> str:     
     if AES_KEY is None:
         return enc
     try:
