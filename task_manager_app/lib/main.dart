@@ -750,6 +750,7 @@ class Task {
   Priority priority;
   DateTime startDate;
   DateTime endDate;
+  String? notes;
   bool isAllDay;
   TimeOfDay? startTime;
   TimeOfDay? endTime;
@@ -761,6 +762,7 @@ class Task {
     required this.priority,
     required this.startDate,
     DateTime? endDate,
+    this.notes,
     this.isAllDay = true,
     this.startTime,
     this.endTime,
@@ -993,10 +995,18 @@ class _HomePageState extends State<HomePage> {
                 try {
                   final api = ApiClient();
                   final uid = UserData.userId;
-                  final body = <String, dynamic>{'id': int.tryParse(taskToEdit.id) ?? taskToEdit.id};
+                  final body = <String, dynamic>{
+                    'id': int.tryParse(taskToEdit.id) ?? taskToEdit.id,
+                    'title': taskToEdit.title,
+                    'start_dt': taskToEdit.startDate.toIso8601String(),
+                    'end_dt': taskToEdit.endDate.toIso8601String(),
+                    'priority': (taskToEdit.priority == Priority.low) ? 1 : (taskToEdit.priority == Priority.medium) ? 2 : 3,
+                    'notes': taskToEdit.notes ?? '',
+                  };
                   if (uid.isNotEmpty) {
                     final n = int.tryParse(uid);
                     if (n != null) body['user_id'] = n;
+                    else body['username'] = uid;
                   }
                   await api.deleteTask(body);
                 } catch (e) {

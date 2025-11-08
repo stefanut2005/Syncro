@@ -552,21 +552,20 @@ def update_task():
     except Exception:
         app.logger.warning("Failed to update local task file for %s", username)
 
-    # Now attempt DB update if possible
+    # Now attempt DB update if possible. Try numeric id first; if non-numeric, do a
+    # best-effort lookup by owner/title/start_dt/end_dt and apply the update to matching rows.
     db_failed = False
     db_task = None
     try:
-        # only attempt DB update if id is numeric
         int_id = None
         try:
             int_id = int(task_id)
         except Exception:
             int_id = None
-        if int_id is None:
-            db_failed = True
-        else:
-            db = SessionLocal()
-            try:
+
+        db = SessionLocal()
+        try:
+            if int_id is not None:
                 task = db.query(Task).filter_by(id=int_id).first()
                 if not task:
                     db_failed = True
@@ -575,11 +574,13 @@ def update_task():
                         task.title = data.get('title')
                     if 'start_dt' in data:
                         try:
+                            from datetime import datetime
                             task.start_dt = datetime.fromisoformat(data.get('start_dt')) if data.get('start_dt') else None
                         except Exception:
                             pass
                     if 'end_dt' in data:
                         try:
+                            from datetime import datetime
                             task.end_dt = datetime.fromisoformat(data.get('end_dt')) if data.get('end_dt') else None
                         except Exception:
                             pass
@@ -595,14 +596,109 @@ def update_task():
                     db.commit()
                     db.refresh(task)
                     db_task = task
-                    # refresh local file from DB authoritative state
                     try:
                         u = db.query(User).filter_by(id=task.owner_id).first()
                         write_user_tasks_file(db, u)
                     except Exception:
                         pass
-            finally:
+            else:
+                # attempt best-effort mapping
+                owner_obj = None
+                owner_id_val = data.get('owner_id') or data.get('user_id')
+                if owner_id_val is not None:
+                    try:
+                        owner_n = int(owner_id_val)
+                        owner_obj = db.query(User).filter_by(id=owner_n).first()
+                    except Exception:
+                        try:
+                            owner_obj = db.query(User).filter_by(username=str(owner_id_val)).first()
+                        except Exception:
+                            owner_obj = None
+
+                q = db.query(Task)
+                if owner_obj:
+                    q = q.filter_by(owner_id=owner_obj.id)
+
+                title = data.get('title')
+                if title:
+                    try:
+                        q = q.filter(Task.title == title)
+                    except Exception:
+                        pass
+
+                from datetime import datetime
+                start_dt = None
+                end_dt = None
+                try:
+                    if data.get('start_dt'):
+                        start_dt = datetime.fromisoformat(data.get('start_dt'))
+                except Exception:
+                    start_dt = None
+                try:
+                    if data.get('end_dt'):
+                        end_dt = datetime.fromisoformat(data.get('end_dt'))
+                except Exception:
+                    end_dt = None
+
+                if start_dt is not None:
+                    try:
+                        q = q.filter(Task.start_dt == start_dt)
+                    except Exception:
+                        pass
+                if end_dt is not None:
+                    try:
+                        q = q.filter(Task.end_dt == end_dt)
+                    except Exception:
+                        pass
+
+                candidates = []
+                try:
+                    candidates = q.all()
+                except Exception:
+                    candidates = []
+
+                if candidates:
+                    # apply updates to all matching candidates
+                    for cand in candidates:
+                        if 'title' in data:
+                            cand.title = data.get('title') or cand.title
+                        if 'start_dt' in data:
+                            try:
+                                cand.start_dt = datetime.fromisoformat(data.get('start_dt')) if data.get('start_dt') else None
+                            except Exception:
+                                pass
+                        if 'end_dt' in data:
+                            try:
+                                cand.end_dt = datetime.fromisoformat(data.get('end_dt')) if data.get('end_dt') else None
+                            except Exception:
+                                pass
+                        if 'priority' in data:
+                            try:
+                                cand.priority = int(data.get('priority') or cand.priority)
+                            except Exception:
+                                pass
+                        if 'notes' in data:
+                            cand.notes = data.get('notes') or cand.notes
+                        db.add(cand)
+                    db.commit()
+                    # pick the first as the returned task
+                    try:
+                        db.refresh(candidates[0])
+                        db_task = candidates[0]
+                    except Exception:
+                        db_task = None
+                    try:
+                        if owner_obj:
+                            write_user_tasks_file(db, owner_obj)
+                    except Exception:
+                        pass
+                else:
+                    db_failed = True
+        finally:
+            try:
                 db.close()
+            except Exception:
+                pass
     except Exception as e:
         app.logger.warning("DB update failed for update_task: %s", e)
         db_failed = True
@@ -682,6 +778,7 @@ def delete_task():
                     owner = db.query(User).filter_by(id=task.owner_id).first() if task.owner_id else None
                     db.delete(task)
                     db.commit()
+                    app.logger.info("delete_task: deleted numeric id %s from DB (owner=%s)", int_id, getattr(owner, 'username', owner.id if owner else None))
                     try:
                         if owner:
                             write_user_tasks_file(db, owner)
@@ -751,6 +848,7 @@ def delete_task():
                     for cand in candidates:
                         db.delete(cand)
                     db.commit()
+                    app.logger.info("delete_task: best-effort matched and deleted %s candidate(s) for username=%s title=%s", len(candidates), getattr(owner_obj, 'username', None), title)
                     try:
                         if owner_obj:
                             write_user_tasks_file(db, owner_obj)
@@ -758,6 +856,7 @@ def delete_task():
                         pass
                 else:
                     # nothing matched in DB
+                    app.logger.info("delete_task: no DB candidates matched for id=%s username=%s title=%s start_dt=%s end_dt=%s", task_id, getattr(owner_obj, 'username', None), title, data.get('start_dt'), data.get('end_dt'))
                     db_failed = True
         finally:
             try:
