@@ -1,0 +1,39 @@
+version: "3.8"
+
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: myuser
+      POSTGRES_PASSWORD: mypassword
+      POSTGRES_DB: appdb
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  web:
+    build: .
+    environment:
+      DATABASE_URL: postgresql://myuser:mypassword@db:5432/appdb
+      PORT: 5555
+    env_file:
+      - ./.env
+    depends_on:
+      - db
+    ports:
+      - "5555:5555"
+    volumes:
+      - logdata:/var/log/app
+      - ./.env:/app/.env:ro
+
+  logviewer:
+    image: alpine:3.18
+    command: sh -c "mkdir -p /var/log/app && tail -F /var/log/app/app.log"
+    volumes:
+      - logdata:/var/log/app
+    depends_on:
+      - web
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  logdata:
