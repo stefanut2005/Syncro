@@ -1,9 +1,12 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
 
 // --- Simple API client ---
 class ApiClient {
@@ -55,11 +58,100 @@ class ApiClient {
 
     return resp.statusCode == 201;
   }
+
+  /// Create a task on the server. Expects a map with keys matching the server
+  /// fields (owner_id, title, start_dt (ISO), end_dt (ISO), priority, notes).
+  /// Returns the created task map on success, or null on failure.
+  Future<Map<String, dynamic>?> createTask(Map<String, dynamic> task) async {
+    final uri = Uri.parse('$baseUrl/create_task');
+    final request = http.Request('POST', uri);
+    request.headers['Content-Type'] = 'application/json';
+    request.body = jsonEncode(task);
+
+    try {
+      final streamedResponse = await request.send().timeout(_timeout);
+      final resp = await http.Response.fromStream(streamedResponse);
+      if (resp.statusCode == 201) {
+        return jsonDecode(resp.body) as Map<String, dynamic>;
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Update an existing task on the server. Expects JSON with 'id' and fields to update.
+  /// Returns updated task map on success, or null on failure.
+  Future<Map<String, dynamic>?> updateTask(Map<String, dynamic> task) async {
+    final uri = Uri.parse('$baseUrl/update_task');
+    final request = http.Request('PUT', uri);
+    request.headers['Content-Type'] = 'application/json';
+    request.body = jsonEncode(task);
+
+    try {
+      final streamedResponse = await request.send().timeout(_timeout);
+      final resp = await http.Response.fromStream(streamedResponse);
+      if (resp.statusCode == 200) {
+        return jsonDecode(resp.body) as Map<String, dynamic>;
+      }
+      // treat 202 or other codes as null for now
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Delete a task on the server. Provide a payload with at least 'id'.
+  /// Returns true if server accepted/confirmed deletion (200 or 202), false otherwise.
+  Future<bool> deleteTask(Map<String, dynamic> payload) async {
+    final uri = Uri.parse('$baseUrl/delete_task');
+    final request = http.Request('DELETE', uri);
+    request.headers['Content-Type'] = 'application/json';
+    request.body = jsonEncode(payload);
+
+    try {
+      final streamedResponse = await request.send().timeout(_timeout);
+      final resp = await http.Response.fromStream(streamedResponse);
+      if (resp.statusCode == 200 || resp.statusCode == 202) {
+        return true;
+      }
+    } catch (e) {
+      // ignore network errors for now
+    }
+    return false;
+  }
+
+  /// Ask the server to read its local per-user JSON file and apply changes to the DB.
+  /// Provide either `username` or `userId` (string). Returns decoded JSON summary or null on failure.
+  Future<Map<String, dynamic>?> updateDbWithLocal({String? username, String? userId}) async {
+    final uri = Uri.parse('$baseUrl/update_db_with_local');
+    final body = <String, dynamic>{};
+    if (username != null && username.isNotEmpty) body['username'] = username;
+    if (userId != null && userId.isNotEmpty) {
+      // try to send numeric id if possible
+      final n = int.tryParse(userId);
+      body['user_id'] = n ?? userId;
+    }
+
+    final request = http.Request('POST', uri);
+    request.headers['Content-Type'] = 'application/json';
+    request.body = jsonEncode(body);
+
+    try {
+      final streamed = await request.send().timeout(_timeout);
+      final resp = await http.Response.fromStream(streamed);
+      if (resp.statusCode == 200 || resp.statusCode == 202) {
+        return jsonDecode(resp.body) as Map<String, dynamic>;
+      }
+    } catch (e) {
+      // ignore for now
+    }
+    return null;
+  }
 }
 
-// --- Theme Management (MODIFIED) ---
+// Theme palette container used across the app
 class AppThemes {
-  // Theme Keys
   static const defaultBlue = 'defaultBlue';
   static const sunrise = 'sunrise';
   static const forest = 'forest';
@@ -67,30 +159,29 @@ class AppThemes {
   static const purple = 'purple';
   static const pink = 'pink';
 
-  // --- MODIFIED: Added new themes with more colors ---
   static final Map<String, Map<String, Color>> themes = {
     defaultBlue: {
       'primary': const Color(0xFF5E81F4),
       'secondary': const Color(0xFF7B68EE),
       'accent': const Color(0xFF4169E1),
-      'gradientEnd': const Color(0xFF4169E1), // Added for gradients
+      'gradientEnd': const Color(0xFF4169E1),
     },
     sunrise: {
-      'primary': const Color(0xFFFF8C00), // Deep Orange
-      'secondary': const Color(0xFFFFB347), // Lighter Orange
-      'accent': const Color(0xFFFF6347), // Tomato Red
+      'primary': const Color(0xFFFF8C00),
+      'secondary': const Color(0xFFFFB347),
+      'accent': const Color(0xFFFF6347),
       'gradientEnd': const Color(0xFFFF6347),
     },
     forest: {
-      'primary': const Color(0xFF2E7D32), // Dark Green
-      'secondary': const Color(0xFF66BB6A), // Light Green
-      'accent': const Color(0xFFA1887F), // Brown
-      'gradientEnd': const Color(0xFF4CAF50), // Brighter Green
+      'primary': const Color(0xFF2E7D32),
+      'secondary': const Color(0xFF66BB6A),
+      'accent': const Color(0xFFA1887F),
+      'gradientEnd': const Color(0xFF4CAF50),
     },
     ocean: {
-      'primary': const Color(0xFF0277BD), // Deep Blue
-      'secondary': const Color(0xFF4FC3F7), // Light Blue
-      'accent': const Color(0xFF009688), // Teal
+      'primary': const Color(0xFF0277BD),
+      'secondary': const Color(0xFF4FC3F7),
+      'accent': const Color(0xFF009688),
       'gradientEnd': const Color(0xFF009688),
     },
     purple: {
@@ -105,7 +196,6 @@ class AppThemes {
       'accent': const Color(0xFFC2185B),
       'gradientEnd': const Color(0xFFC2185B),
     },
-    // Removed green, orange, teal as they are replaced by richer themes
   };
 }
 // --- END MODIFICATION ---
@@ -278,6 +368,7 @@ class TaskManagerApp extends StatelessWidget {
 class UserData {
   static String username = 'User';
   static String email = 'user@example.com';
+  static String userId = '';
 }
 
 // --- Authentication Pages ---
@@ -326,6 +417,18 @@ class _LoginPageState extends State<LoginPage> {
         // Use server-provided username/email (server returns decrypted email)
         UserData.username = (resp['username'] as String?) ?? '';
         UserData.email = (resp['email'] as String?) ?? '';
+  // Save server-provided user id for later operations
+  UserData.userId = (resp['user_id']?.toString()) ?? '';
+  // If server returned tasks, persist them to a local JSON file named by user id
+        try {
+          final uid = resp['user_id']?.toString();
+          final tasks = resp['tasks'] as List<dynamic>?;
+          if (uid != null && tasks != null) {
+            await _saveTasksLocally(uid, tasks);
+          }
+        } catch (e) {
+          // ignore local save errors for now
+        }
         if (mounted) Navigator.pushReplacementNamed(context, '/home');
       } else {
         if (mounted) {
@@ -340,6 +443,24 @@ class _LoginPageState extends State<LoginPage> {
           SnackBar(content: Text('Login failed: $e')),
         );
       }
+    }
+  }
+
+  Future<void> _saveTasksLocally(String userId, List<dynamic> tasks) async {
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final sanitized = userId.replaceAll(RegExp(r"[^a-zA-Z0-9_\-]"), '_');
+      final file = File('${dir.path}/$sanitized.json');
+      final encoded = jsonEncode(tasks);
+      await file.writeAsString(encoded, flush: true);
+      // Helpful debug output so you can see where the file was written at runtime
+      // (visible in the Flutter run / adb logcat output)
+      try {
+        // ignore: avoid_print
+        print('Saved tasks to: ${file.path}');
+      } catch (_) {}
+    } catch (e) {
+      // ignore write errors for now; could log or surface to UI later
     }
   }
 
@@ -664,69 +785,8 @@ class _HomePageState extends State<HomePage> {
   DateTime _selectedDate = DateUtils.dateOnly(DateTime.now());
   final ScrollController _dateScrollController = ScrollController();
 
-  final List<Task> _tasks = [
-    Task(
-      id: '1',
-      title: 'Team Meeting',
-      priority: Priority.high,
-      startDate: DateUtils.dateOnly(DateTime.now()),
-      isAllDay: false,
-      startTime: const TimeOfDay(hour: 10, minute: 0),
-      endTime: const TimeOfDay(hour: 11, minute: 0),
-    ),
-    Task(
-      id: '2',
-      title: 'Project Sprint (Daily)',
-      priority: Priority.high,
-      startDate:
-          DateUtils.dateOnly(DateTime.now().subtract(const Duration(days: 2))),
-      endDate: DateUtils.dateOnly(DateTime.now().add(const Duration(days: 3))),
-      isAllDay: true,
-    ),
-    Task(
-      id: '3',
-      title: 'Gym Workout',
-      priority: Priority.medium,
-      startDate: DateUtils.dateOnly(DateTime.now()),
-      isAllDay: false,
-      startTime: const TimeOfDay(hour: 18, minute: 0),
-      endTime: const TimeOfDay(hour: 19, minute: 30),
-    ),
-    Task(
-      id: '4',
-      title: 'Buy Groceries',
-      priority: Priority.low,
-      startDate: DateUtils.dateOnly(DateTime.now()),
-      isAllDay: true,
-    ),
-    Task(
-      id: '5',
-      title: 'Vacation (Monthly)',
-      priority: Priority.medium,
-      startDate: DateUtils.dateOnly(DateTime.now().add(const Duration(days: 5))),
-      endDate:
-          DateUtils.dateOnly(DateTime.now().add(const Duration(days: 35))),
-      isAllDay: true,
-    ),
-    Task(
-      id: '6',
-      title: 'Phase 2 Planning (Weekly)',
-      priority: Priority.high,
-      startDate: DateUtils.dateOnly(DateTime.now().add(const Duration(days: 4))),
-      endDate:
-          DateUtils.dateOnly(DateTime.now().add(const Duration(days: 18))),
-      isAllDay: true,
-    ),
-    Task(
-      id: '7',
-      title: 'Dentist Appointment',
-      priority: Priority.medium,
-      startDate: DateUtils.dateOnly(DateTime.now().add(const Duration(days: 2))),
-      isAllDay: false,
-      startTime: const TimeOfDay(hour: 14, minute: 30),
-      endTime: const TimeOfDay(hour: 15, minute: 0),
-    ),
-  ];
+  // Start with an empty tasks list; we'll load persisted tasks from disk or DB
+  final List<Task> _tasks = [];
 
   @override
   void initState() {
@@ -734,12 +794,101 @@ class _HomePageState extends State<HomePage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _scrollToSelectedDate(isAnimated: false);
     });
+    // start periodic sync with server to push server-side local file into DB
+    _startPeriodicServerSync();
+    // load persisted tasks for the logged-in user (if any)
+    _loadLocalTasks();
+  }
+
+  Timer? _syncTimer;
+
+  void _startPeriodicServerSync() {
+    // avoid multiple timers
+    _syncTimer?.cancel();
+    _syncTimer = Timer.periodic(const Duration(seconds: 30), (_) async {
+      await _callUpdateDbWithLocal();
+    });
   }
 
   @override
   void dispose() {
+    _syncTimer?.cancel();
     _dateScrollController.dispose();
     super.dispose();
+  }
+
+  Future<void> _callUpdateDbWithLocal() async {
+    try {
+      final api = ApiClient();
+      final resp = await api.updateDbWithLocal(username: UserData.username, userId: UserData.userId);
+      if (resp != null) {
+        // debug print summary
+        try {
+          // ignore: avoid_print
+          print('update_db_with_local: ${resp}');
+        } catch (_) {}
+      }
+    } catch (e) {
+      // ignore network errors for now
+    }
+  }
+
+  Future<void> _loadLocalTasks() async {
+    try {
+      final uid = UserData.userId;
+      if (uid == null || uid.isEmpty) return;
+      final dir = await getApplicationDocumentsDirectory();
+      final sanitized = uid.replaceAll(RegExp(r"[^a-zA-Z0-9_\-]"), '_');
+      final file = File('${dir.path}/$sanitized.json');
+      if (!await file.exists()) return;
+      final txt = await file.readAsString();
+      if (txt.trim().isEmpty) return;
+      final decoded = jsonDecode(txt);
+      List<dynamic> arr = [];
+      if (decoded is List) arr = decoded;
+      else if (decoded is Map && decoded['tasks'] is List) arr = decoded['tasks'];
+
+      final List<Task> loaded = [];
+      for (final e in arr) {
+        try {
+          final id = (e['id'] != null) ? e['id'].toString() : DateTime.now().millisecondsSinceEpoch.toString();
+          final title = (e['title'] as String?) ?? 'Untitled';
+          final priorityNum = int.tryParse((e['priority']?.toString() ?? '1')) ?? 1;
+          Priority pr;
+          if (priorityNum >= 3) pr = Priority.high;
+          else if (priorityNum == 2) pr = Priority.medium;
+          else pr = Priority.low;
+          DateTime startDate = DateTime.now();
+          DateTime endDate = startDate;
+          try {
+            if (e['start_dt'] != null) startDate = DateTime.parse(e['start_dt']);
+          } catch (_) {}
+          try {
+            if (e['end_dt'] != null) endDate = DateTime.parse(e['end_dt']);
+          } catch (_) { endDate = startDate; }
+
+          loaded.add(Task(
+            id: id,
+            title: title,
+            priority: pr,
+            startDate: startDate,
+            endDate: endDate,
+            isAllDay: true,
+          ));
+        } catch (_) {
+          // skip invalid entries
+        }
+      }
+
+      if (mounted && loaded.isNotEmpty) {
+        setState(() {
+          _tasks.clear();
+          _tasks.addAll(loaded);
+        });
+      }
+    } catch (e) {
+      // ignore errors for now
+    }
   }
 
   void _scrollToSelectedDate({bool isAnimated = true}) {
@@ -792,7 +941,7 @@ class _HomePageState extends State<HomePage> {
       builder: (ctx) => TaskEditSheet(
         task: taskToEdit,
         defaultDate: _selectedDate,
-        onSave: (Task task) {
+        onSave: (Task task) async {
           setState(() {
             if (taskToEdit == null) {
               _tasks.add(task);
@@ -802,11 +951,57 @@ class _HomePageState extends State<HomePage> {
             }
           });
           Navigator.pop(context);
+          // Persist the newly added or updated task remotely and locally (best-effort)
+          if (taskToEdit == null) {
+            await _createOrPersistTask(task);
+          } else {
+            await _updateOrPersistTask(task, oldId: taskToEdit.id);
+          }
         },
         onDelete: taskToEdit != null
-            ? () {
+            ? () async {
+                // Remove from in-memory list immediately
                 setState(() => _tasks.removeWhere((t) => t.id == taskToEdit.id));
                 Navigator.pop(context);
+
+                // Also remove from local JSON file for this user
+                try {
+                  final uid = UserData.userId;
+                  final dir = await getApplicationDocumentsDirectory();
+                  final sanitized = (uid.isNotEmpty ? uid : 'anon')
+                      .replaceAll(RegExp(r"[^a-zA-Z0-9_\-]"), '_');
+                  final file = File('${dir.path}/$sanitized.json');
+                  if (await file.exists()) {
+                    final txt = await file.readAsString();
+                    if (txt.trim().isNotEmpty) {
+                      try {
+                        List<dynamic> arr = jsonDecode(txt) as List<dynamic>;
+                        arr.removeWhere((e) => e['id'].toString() == taskToEdit.id);
+                        await file.writeAsString(jsonEncode(arr), flush: true);
+                        // ignore: avoid_print
+                        print('Deleted task locally from ${file.path}');
+                      } catch (_) {
+                        // ignore parse/write errors
+                      }
+                    }
+                  }
+                } catch (e) {
+                  // ignore local delete errors
+                }
+
+                // Attempt server-side delete (best-effort). If it fails, the server will reconcile when sync runs.
+                try {
+                  final api = ApiClient();
+                  final uid = UserData.userId;
+                  final body = <String, dynamic>{'id': int.tryParse(taskToEdit.id) ?? taskToEdit.id};
+                  if (uid.isNotEmpty) {
+                    final n = int.tryParse(uid);
+                    if (n != null) body['user_id'] = n;
+                  }
+                  await api.deleteTask(body);
+                } catch (e) {
+                  // ignore network errors; sync will reconcile later
+                }
               }
             : null,
       ),
@@ -815,6 +1010,153 @@ class _HomePageState extends State<HomePage> {
 
   void _toggleTaskStatus(Task task) {
     setState(() => task.isDone = !task.isDone);
+  }
+
+  
+
+  Future<void> _createOrPersistTask(Task task) async {
+    final uid = UserData.userId;
+    final api = ApiClient();
+
+    // Create a map matching the server fields
+    Map<String, dynamic> toSend = {
+      'owner_id': int.tryParse(uid ?? '') ,
+      'title': task.title,
+      'start_dt': task.startDate.toIso8601String(),
+      'end_dt': task.endDate.toIso8601String(),
+      'priority': (task.priority == Priority.low) ? 1 : (task.priority == Priority.medium) ? 2 : 3,
+      'notes': '',
+    };
+
+    Map<String, dynamic>? created;
+    if (uid.isNotEmpty) {
+      try {
+        created = await api.createTask(toSend);
+      } catch (e) {
+        created = null;
+      }
+    }
+
+    // Now append either the created server task (preferred) or our local map
+    final entry = created ?? {
+      'id': task.id,
+      'owner_id': uid.isNotEmpty ? int.tryParse(uid) : null,
+      'title': task.title,
+      'start_dt': task.startDate.toIso8601String(),
+      'end_dt': task.endDate.toIso8601String(),
+      'priority': (task.priority == Priority.low) ? 1 : (task.priority == Priority.medium) ? 2 : 3,
+      'notes': '',
+    };
+
+    // Append to user's local JSON file (remove any existing entries with same id)
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final sanitized = (uid.isNotEmpty ? uid : 'anon').replaceAll(RegExp(r"[^a-zA-Z0-9_\-]"), '_');
+      final file = File('${dir.path}/$sanitized.json');
+      List<dynamic> arr = [];
+      if (await file.exists()) {
+        final txt = await file.readAsString();
+        if (txt.trim().isNotEmpty) {
+          try {
+            arr = jsonDecode(txt) as List<dynamic>;
+          } catch (_) {
+            arr = [];
+          }
+        }
+      }
+      // remove any entries with same id
+      arr.removeWhere((e) => e['id'] == entry['id']);
+      arr.add(entry);
+      await file.writeAsString(jsonEncode(arr), flush: true);
+      // ignore: avoid_print
+      print('Persisted task to local file: ${file.path}');
+    } catch (e) {
+      // ignore write errors for now
+    }
+  }
+
+  Future<void> _updateOrPersistTask(Task task, {required String oldId}) async {
+    final uid = UserData.userId;
+    final api = ApiClient();
+
+    // Build payload for update
+    Map<String, dynamic> toSend = {
+      'id': int.tryParse(task.id) ?? task.id,
+      'title': task.title,
+      'start_dt': task.startDate.toIso8601String(),
+      'end_dt': task.endDate.toIso8601String(),
+      'priority': (task.priority == Priority.low) ? 1 : (task.priority == Priority.medium) ? 2 : 3,
+      'notes': '',
+    };
+
+    Map<String, dynamic>? updated;
+    if (uid.isNotEmpty) {
+      try {
+        updated = await api.updateTask(toSend);
+      } catch (e) {
+        updated = null;
+      }
+    }
+
+    // Update local file: if server returned an updated/created entry with an id different from oldId,
+    // remove the old id and add the new entry; otherwise replace the old entry.
+    final entry = updated ?? {
+      'id': task.id,
+      'owner_id': uid.isNotEmpty ? int.tryParse(uid) : null,
+      'title': task.title,
+      'start_dt': task.startDate.toIso8601String(),
+      'end_dt': task.endDate.toIso8601String(),
+      'priority': (task.priority == Priority.low) ? 1 : (task.priority == Priority.medium) ? 2 : 3,
+      'notes': '',
+    };
+
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final sanitized = (uid.isNotEmpty ? uid : 'anon').replaceAll(RegExp(r"[^a-zA-Z0-9_\-]"), '_');
+      final file = File('${dir.path}/$sanitized.json');
+      List<dynamic> arr = [];
+      if (await file.exists()) {
+        final txt = await file.readAsString();
+        if (txt.trim().isNotEmpty) {
+          try {
+            arr = jsonDecode(txt) as List<dynamic>;
+          } catch (_) {
+            arr = [];
+          }
+        }
+      }
+      // Remove old entry by oldId as well as any entry with the new id
+      arr.removeWhere((e) => e['id'] == entry['id'] || e['id'] == oldId);
+      arr.add(entry);
+      await file.writeAsString(jsonEncode(arr), flush: true);
+      // ignore: avoid_print
+      print('Updated local task file: ${file.path}');
+    } catch (e) {
+      // ignore write errors
+    }
+
+    // If server returned an updated entry with a new id, update in-memory list as well
+    if (updated != null) {
+      final u = updated; // local non-null reference for null-safety inside closures
+      final newId = u['id']?.toString();
+      if (newId != null) {
+        if (mounted) {
+          setState(() {
+            final idx = _tasks.indexWhere((t) => t.id == oldId);
+            if (idx != -1) {
+              _tasks[idx] = Task(
+                id: newId,
+                title: (u['title'] as String?) ?? _tasks[idx].title,
+                priority: ((u['priority'] ?? 1) == 3) ? Priority.high : ((u['priority'] ?? 1) == 2 ? Priority.medium : Priority.low),
+                startDate: u['start_dt'] != null ? DateTime.parse(u['start_dt']) : _tasks[idx].startDate,
+                endDate: u['end_dt'] != null ? DateTime.parse(u['end_dt']) : _tasks[idx].endDate,
+                isAllDay: true,
+              );
+            }
+          });
+        }
+      }
+    }
   }
 
   int _compareTasksByPriority(Task a, Task b) {
@@ -2220,14 +2562,14 @@ class TaskEditSheet extends StatefulWidget {
   final Task? task;
   final DateTime defaultDate;
   final Function(Task) onSave;
-  final VoidCallback? onDelete;
+  final Future<void> Function()? onDelete;
 
   const TaskEditSheet({
     super.key,
     this.task,
     required this.defaultDate,
     required this.onSave,
-    this.onDelete,
+  this.onDelete,
   });
 
   @override
@@ -2359,7 +2701,10 @@ class _TaskEditSheetState extends State<TaskEditSheet> {
                   IconButton(
                     icon: const Icon(Icons.delete_outline_rounded,
                         color: Colors.red),
-                    onPressed: widget.onDelete,
+                    onPressed: () {
+                      // fire-and-forget the async delete handler
+                      widget.onDelete?.call();
+                    },
                   ),
               ],
             ),
