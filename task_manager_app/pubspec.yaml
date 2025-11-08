@@ -42,6 +42,8 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
 
+  flutter_launcher_icons: ^0.10.0
+
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
   # activated in the `analysis_options.yaml` file located at the root of your
@@ -64,6 +66,23 @@ flutter:
   # assets:
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg
+  assets:
+      - web/syncro.png
+
+# Configuration for generating platform launcher icons from a single source image.
+# Place your app logo at the path above (web/syncro.png) — a 1024x1024 PNG is recommended.
+flutter_icons:
+  android: true
+  ios: true
+  macos:
+    image_path: "web/syncro.png"
+  windows:
+    image_path: "web/syncro.png"
+  linux:
+    image_path: "web/syncro.png"
+  image_path: "web/syncro.png"
+  adaptive_icon_foreground: "web/syncro.png"
+  adaptive_icon_background: "#FFFFFF"
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

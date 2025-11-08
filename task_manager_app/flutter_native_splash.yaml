@@ -1,0 +1,15 @@
+flutter_native_splash:
+  color: "#ffffff"
+  image: web/syncro.png
+  branding: web/syncro.png
+  color_dark: "#000000"
+  image_dark: web/syncro.png
+  branding_dark: web/syncro.png
+
+  android_12:
+    image: web/syncro.png
+    icon_background_color: "#ffffff"
+    image_dark: web/syncro.png
+    icon_background_color_dark: "#000000"
+
+  web: true
