@@ -8,7 +8,7 @@ import 'package:http/http.dart' as http;
 
 // --- Simple API client ---
 class ApiClient {
-  static const String baseUrl = 'https://ff5ae32c379e.ngrok-free.app';
+  static const String baseUrl = 'https://e62208360fb0.ngrok-free.app';
   final Duration _timeout = const Duration(seconds: 10);
 
   /// Attempt login. Returns decoded JSON map on success (contains at least
