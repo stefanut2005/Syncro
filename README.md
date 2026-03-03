@@ -1,6 +1,6 @@
 # Syncro
 
-A cross-platform task manager with login form that pairs a Flutter mobile client with a Python/Flask backend to provide team task coordination and offline sync.
+A cross-platform task manager with login form that pairs a Flutter mobile client with a Python/Flask backend to provide team task coordination and offline sync. Works on both Android and IOS.
 
 ## Project structure
 - `backend/` — Python backend (Flask + SQLAlchemy). Important files:
